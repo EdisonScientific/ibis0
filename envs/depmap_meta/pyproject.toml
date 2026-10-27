@@ -1,0 +1,22 @@
+[project]
+name = "depmap-meta"
+version = "0.1.0"
+description = "DepMap Gene-Essentiality Evidence Deliberation Environment"
+dependencies = [
+    "verifiers>=0.1.5.post0",
+    "datasets",
+    "pandas",
+    "pyarrow",
+    "numpy",
+    "ibis-env-utils",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build]
+include = ["depmap_meta.py"]
+
+[tool.uv.sources]
+ibis-env-utils = { workspace = true }

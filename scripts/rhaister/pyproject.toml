@@ -1,0 +1,13 @@
+[project]
+name = "rhaister-tahoe-baseline"
+version = "0.1.0"
+requires-python = ">=3.11,<3.14"
+dependencies = [
+    "numpy",
+    "pandas",
+    "pyarrow",
+    "rhaister",
+]
+
+[tool.uv.sources]
+rhaister = { git = "https://huggingface.co/tahoebio/Rhaister", rev = "75fed20" }

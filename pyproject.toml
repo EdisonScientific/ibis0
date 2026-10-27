@@ -1,0 +1,101 @@
+[project]
+name = "ibis0"
+version = "1.0.0"
+description = "Code for 'Do Language Models Know What Compelling Scientific Evidence Looks Like?' (EDB-Bio / Ibis0)"
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = "~=3.12.0"
+dependencies = [
+    "prime-rl[flash-attn,disagg]",
+    "ibis-env-utils",
+    "gwas-meta",
+    "depmap-meta",
+    "tahoe-meta",
+    "pyarrow",
+    "scikit-learn",
+    "matplotlib",
+    "openai",
+    "anthropic",
+    "tqdm",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.1",
+    "ruff>=0.12.1",
+]
+
+[tool.uv]
+preview = true
+package = false
+environments = [
+    "sys_platform == 'linux' and platform_machine == 'x86_64'",
+    "sys_platform == 'linux' and platform_machine == 'aarch64'",
+]
+# Workspace-wide overrides (members' overrides are ignored, so the root carries them). These are the
+# versions the paper's runs used.
+# - transformers: vLLM caps it below what prime-rl needs.
+# - nvidia-cudnn-cu12: torch's default cuDNN has a Conv3d performance regression
+#   (https://github.com/pytorch/pytorch/issues/166122).
+# - nvidia-cutlass-dsl / quack-kernels: pinned together to the last pair compatible with vLLM's
+#   apache-tvm-ffi pin; newer pairs crash prime-rl's fused RMSNorm on the first forward pass.
+# - torch / vllm: match prime-rl's pins; torchvision is the cu128 wheel matching torch.
+override-dependencies = [
+    "nvidia-cudnn-cu12>=9.15",
+    "nvidia-cutlass-dsl==4.5.0",
+    "quack-kernels==0.4.1",
+    "transformers>=5.1.0.dev0",
+    "torch>=2.10,<2.12",
+    "vllm>=0.22.0",
+    "litellm>=1.86.0",
+    "jsonschema>=4.25.1",
+    "torchvision @ https://download.pytorch.org/whl/cu128/torchvision-0.25.0%2Bcu128-cp312-cp312-manylinux_2_28_x86_64.whl ; platform_machine == 'x86_64'",
+]
+
+[tool.uv.workspace]
+# prime-rl has its own workspace, and uv forbids nested workspaces, so it is consumed below as an
+# editable path dependency on the pinned submodule.
+members = ["envs/ibis_env_utils", "envs/gwas_meta", "envs/depmap_meta", "envs/tahoe_meta"]
+
+[tool.uv.sources]
+prime-rl = { path = "src/prime_rl", editable = true }
+ibis-env-utils = { workspace = true }
+gwas-meta = { workspace = true }
+depmap-meta = { workspace = true }
+tahoe-meta = { workspace = true }
+torch = { index = "pytorch-cu128" }
+torchvision = { index = "pytorch-cu128" }
+torchaudio = { index = "pytorch-cu128" }
+vllm = [
+    { url = "https://github.com/vllm-project/vllm/releases/download/v0.22.0/vllm-0.22.0+cu129-cp38-abi3-manylinux_2_28_x86_64.whl", marker = "platform_machine == 'x86_64'" },
+    { url = "https://github.com/vllm-project/vllm/releases/download/v0.22.0/vllm-0.22.0+cu129-cp38-abi3-manylinux_2_28_aarch64.whl", marker = "platform_machine == 'aarch64'" },
+]
+vllm-router = { url = "https://github.com/PrimeIntellect-ai/router/releases/download/v0.1.26/vllm_router-0.1.26-cp38-abi3-manylinux_2_28_x86_64.whl" }
+# prime-rl's own workspace members, as path sources (see the workspace note above).
+prime-rl-configs = { path = "src/prime_rl/packages/prime-rl-configs", editable = true }
+prime-pydantic-config = { path = "src/prime_rl/deps/pydantic-config", editable = true }
+verifiers = { path = "src/prime_rl/deps/verifiers", editable = true }
+renderers = { path = "src/prime_rl/deps/renderers", editable = true }
+
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
+
+[tool.ruff]
+line-length = 120
+extend-exclude = ["src/prime_rl"]
+
+[tool.ruff.lint]
+select = ["F", "I"]
+ignore = ["F722", "F821"]
+
+[tool.pytest.ini_options]
+addopts = "--strict-markers --import-mode=importlib"
+# Collect only this repo's tests; the prime-rl submodule has its own CI.
+testpaths = ["envs", "scripts", "train"]
+pythonpath = ["scripts/data_pipeline"]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "gpu: marks tests as gpu (deselect with '-m \"not gpu\"')",
+]

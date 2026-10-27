@@ -1,0 +1,51 @@
+# gwas-depmap__qwen3-30b-a3b__cls__r2.1.0
+# r2.1.0 multi-domain classification-head run: train on gwas + depmap (equal weight), HOLD OUT tahoe.
+# Evaluates per-domain on all three, so the held-out transfer number falls out directly as
+# eval/tahoe/brier_reward (vs. the in-domain eval/gwas + eval/depmap). Layered over
+# train/_common/classification-base.toml (shared 30B recipe: model / optim lr=9e-6 / warmup
+# scheduler / 3000 steps / ckpt); carries only the per-run knobs.
+# Launch:
+#   RUN=train/multi_meta/runs/gwas-depmap__qwen3-30b-a3b__cls__r2.1.0
+#   sbatch --job-name="$(basename "$RUN")" train/_common/launch-classification.sbatch "$RUN"
+
+max_steps = 9000  # r2.1.0: raised from 3000 (base) — uniform safety ceiling; early stop is the real terminator
+
+[wandb]
+project = "multidomain-classification"
+name = "gwas-depmap__qwen3-30b-a3b__cls__r2.1.0"
+
+[model]
+# Tahoe-compatible length, uniform across every cls run so seq_len is not a confound in the transfer
+# comparison (16384 is also a hard floor whenever tahoe is in the train/eval set -- it renders longer
+# and encode_record raises rather than truncating).
+seq_len = 16384
+
+# Training mix -- equal weight (omit `weight` on all -> uniform 1:1 mixture via MixtureDataset).
+[[domains]]
+domain = "gwas"
+data_path = "hf://EdisonScientific/EDB-Bio/gwas"
+
+[[domains]]
+domain = "depmap"
+data_path = "hf://EdisonScientific/EDB-Bio/depmap"
+
+# Held-out domain -- evaluated but NOT trained. Eval covers the union (gwas, depmap, tahoe):
+# eval/<domain>/* per domain, eval/in_domain/* over gwas+depmap, eval/held_out/* over tahoe.
+[[held_out]]
+domain = "tahoe"
+data_path = "hf://EdisonScientific/EDB-Bio/tahoe"
+
+# --- r2.1.0 checkpoint selection: best-N by in-domain eval loss + patience early stop ---
+# Validation-metric checkpointing via train/_common/classification/best_ckpt.py. Selection keys
+# off the full metric key `eval/in_domain/loss` (macro-mean BCE over the TRAINED domains; a held-out
+# domain never drives selection). max_steps is a safety ceiling; the loss plateau (early stop) is the
+# real terminator.
+[ckpt]
+interval = 100          # was 250 (base); a multiple of eval_interval (100) so every ckpt is scored
+keep_last = "None"      # cleared in favor of keep_best_n ("None" -> null on merge)
+keep_interval = "None"
+keep_best_n = 2
+best_metric = "eval/in_domain/loss"
+best_mode = "min"
+early_stop_patience = 1000
+early_stop_min_delta = 0.0001

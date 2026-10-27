@@ -1,0 +1,83 @@
+# gwas-depmap-tahoe__qwen3-30b-a3b__rl-direct__r2.1.0
+# r2.1.0 rl-direct multi-domain RL: train on ALL THREE (gwas, depmap, tahoe, equal ratio) -- the cross-transfer baseline (nothing held out).
+# Evaluates on all three domains -> eval/<name>/reward per domain; every domain is in-domain here -- the upper reference for the held-out runs.
+# Layered over train/_common/rl-base.toml (shared 30B recipe: model / optim / warmup scheduler / ckpt /
+# zero-advantage filter / temp-0.7 train==eval). Mode: direct (enable_thinking=false, answer-only prompt).
+# Context: per-episode K ~ Uniform{2..16} (context_size_range), keyed by episode_id.
+# Launch:  train/_common/launch-rl.sh train/multi_meta/runs/gwas-depmap-tahoe__qwen3-30b-a3b__rl-direct__r2.1.0
+# 9216 fits the longest evidence-deliberation prompt at context=16 (tahoe ~8044, gwas ~6266 tokens)
+# plus the 512-token direct completion (a shorter limit makes vLLM reject high-context prompts as
+# "prompt too long"). Right-sized from a full-dataset token-length measurement.
+seq_len = 9216
+
+# The paper's run stopped here, when the validation-metric early-stop rule fired (see
+# scripts/select_checkpoint.py). The as-run config is kept for provenance in as-run/.
+max_steps = 4500
+
+[wandb]
+project = "multidomain-rl"
+name = "gwas-depmap-tahoe__qwen3-30b-a3b__rl-direct__r2.1.0"
+
+[orchestrator]
+batch_size = 32
+rollouts_per_example = 8
+
+[orchestrator.train.sampling]
+max_completion_tokens = 512
+extra_body = { chat_template_kwargs = { enable_thinking = false } }
+
+# Training mix -- equal weight (ratio = 1 on every trained env -> uniform mixture via TrainSource).
+[[orchestrator.train.env]]
+id = "gwas-meta"
+name = "gwas-evidence"
+ratio = 1
+args = { data_path = "hf://EdisonScientific/EDB-Bio/gwas", context_size = 16, context_size_range = [2, 16], reward_type = "brier", unparseable_reward = -1.0, prompt_style = "direct" }
+
+[[orchestrator.train.env]]
+id = "depmap-meta"
+name = "depmap-evidence"
+ratio = 1
+args = { data_path = "hf://EdisonScientific/EDB-Bio/depmap", context_size = 16, context_size_range = [2, 16], reward_type = "brier", unparseable_reward = -1.0, prompt_style = "direct" }
+
+[[orchestrator.train.env]]
+id = "tahoe-meta"
+name = "tahoe-evidence"
+ratio = 1
+args = { data_path = "hf://EdisonScientific/EDB-Bio/tahoe", context_size = 16, context_size_range = [2, 16], reward_type = "brier", unparseable_reward = -1.0, prompt_style = "direct", length_half_life_tokens = 0 }
+
+[orchestrator.eval.sampling]
+max_completion_tokens = 512
+extra_body = { chat_template_kwargs = { enable_thinking = false } }
+
+# Eval on all three domains (held-out included) -> independent eval/<name>/reward per domain.
+[[orchestrator.eval.env]]
+id = "gwas-meta"
+name = "gwas-evidence"
+num_examples = 256
+rollouts_per_example = 4
+args = { data_path = "hf://EdisonScientific/EDB-Bio/gwas", context_size = 16, context_size_range = [2, 16], reward_type = "brier", unparseable_reward = -1.0, prompt_style = "direct" }
+
+[[orchestrator.eval.env]]
+id = "depmap-meta"
+name = "depmap-evidence"
+num_examples = 256
+rollouts_per_example = 4
+args = { data_path = "hf://EdisonScientific/EDB-Bio/depmap", context_size = 16, context_size_range = [2, 16], reward_type = "brier", unparseable_reward = -1.0, prompt_style = "direct" }
+
+[[orchestrator.eval.env]]
+id = "tahoe-meta"
+name = "tahoe-evidence"
+num_examples = 256
+rollouts_per_example = 4
+args = { data_path = "hf://EdisonScientific/EDB-Bio/tahoe", context_size = 16, context_size_range = [2, 16], reward_type = "brier", unparseable_reward = -1.0, prompt_style = "direct", length_half_life_tokens = 0 }
+
+[inference.model]
+max_model_len = 9216
+
+[ckpt]
+interval = 100          # was 250 (base); a multiple of the eval interval (100) so every ckpt is scored
+# Keep every checkpoint; scripts/select_checkpoint.py --prune --watch reproduces the paper's
+# best-2-by-eval/all/avg@4 retention (run it alongside training to bound disk use).
+keep_last = "None"
+keep_interval = "None"
+

@@ -1,0 +1,80 @@
+# BED conditional evidence simulator — SFT of Qwen3-30B-A3B on the combined gwas+depmap+tahoe
+# stub-outcome dataset (built by scripts/data_pipeline/build_bed_simulator_sft.py). The model predicts
+# a candidate experiment's outcome JSON conditioned on support/weight-of-evidence; loss is on the
+# assistant JSON only. Launch: sbatch train/multi_meta/sft/bed-simulator/launch-sft.sbatch
+output_dir = "ibis_data/sft/bed-simulator-v1"
+max_steps = 1200
+
+# Mirror the classifier's model block (train/_common/classification-base.toml), which loads
+# Qwen/Qwen3-30B-A3B correctly: impl="auto" uses prime-rl's custom Qwen3-MoE with the grouped-expert
+# weight conversion (impl="hf" leaves experts per-expert and fails the DCP load with a missing
+# experts.down_proj key).
+[model]
+name = "Qwen/Qwen3-30B-A3B"
+impl = "auto"
+attn = "flash_attention_2"
+optim_cpu_offload = true
+optimization_dtype = "bfloat16"
+reduce_dtype = "bfloat16"
+# NOTE: no fused_lm_head_token_chunk_size here — SFT rejects chunked lm-head loss (classifier-only).
+ep = 1
+cp = 1
+cp_style = "ulysses"
+
+[model.ac]
+freq = 1
+
+# Qwen3 renders position-dependently, so SFT must tokenize through the renderers library (not the
+# legacy incremental-mask path) for correct assistant-only loss masking. enable_thinking=false: the
+# simulator emits a direct JSON object, no thinking block.
+[renderer]
+name = "qwen3"
+enable_thinking = false
+
+[data]
+type = "sft"
+name = "ibis_data/bed_sim/sft"
+splits = ["train"]
+batch_size = 64
+micro_batch_size = 1
+seq_len = 12288      # headroom for the longest tahoe context (~8k tok) + candidate + completion
+pack_function = "cat"
+
+[data.loss_mask]
+system = false
+user = false
+assistant = true
+
+[val]
+interval = 100
+eval_on_start = true
+
+[val.data]
+type = "sft"
+name = "ibis_data/bed_sim/sft"
+splits = ["validation"]   # HF datasets normalizes val.parquet -> the "validation" split
+batch_size = 64
+micro_batch_size = 1
+seq_len = 12288
+
+[val.data.loss_mask]
+system = false
+user = false
+assistant = true
+
+[optim]
+type = "adamw"
+lr = 1e-5
+
+[ckpt]
+interval = 150
+keep_last = 3
+keep_interval = 150
+
+[ckpt.weights]
+save_sharded = false
+save_format = "safetensors"
+
+[wandb]
+project = "ibis-bed-simulator"
+name = "bed-simulator-sft-v1"

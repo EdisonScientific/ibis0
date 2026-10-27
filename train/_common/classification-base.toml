@@ -1,0 +1,65 @@
+# Shared r2.1.0 classification-head recipe, layered under each run's train.toml via prime-rl's
+# left-to-right deep merge (`@ classification-base.toml @ <run>/train.toml`). Under r2.x every
+# domain's classification run uses the same 30B model, optimizer, warmup scheduler, step budget, and
+# checkpoint policy, so all of that lives here. Each run override carries only what genuinely varies:
+# `domain`, `data_path`, `[wandb]`, and `[model] seq_len`. output_dir is injected by
+# launch-classification.sbatch (defaults to outputs/<domain>-meta-classifier otherwise).
+#
+# Memory/parallelism settings (optim_cpu_offload=false, cp=1, selective AC) follow the same 8xB200
+# rationale as train/_common/rl-base.toml; there is no inference server here.
+max_steps = 3000
+eval_interval = 100
+grad_accum_steps = 16
+dist_timeout_seconds = 1800
+
+# Data — trainer-side sampler knobs shared across domains (data_path is per-domain).
+# Train (and eval) on a distribution of context lengths rather than a fixed size: each episode
+# renders K ~ Uniform{2..16} stubs, drawn deterministically from episode_id (+ context_seed) so K is
+# stable across runs/splits/models and matches the RL env's render for the same episode. Set
+# context_size_range = "None" (or drop it) to fall back to the fixed `context_size`.
+context_size = 16
+context_size_range = [2, 16]
+context_seed = 0
+shuffle_seed = 0
+
+[log]
+level = "info"
+
+[model]
+name = "Qwen/Qwen3-30B-A3B"
+impl = "auto"
+attn = "flash_attention_2"
+optim_cpu_offload = false
+optimization_dtype = "bfloat16"
+reduce_dtype = "bfloat16"
+fused_lm_head_token_chunk_size = 8192
+ep = 1
+cp = 1
+cp_style = "ulysses"
+
+[model.ac]
+mode = "selective"
+freq = 1
+
+[optim]
+type = "adamw"
+lr = 9e-06
+weight_decay = 0.01
+max_norm = 1.0
+
+[scheduler]
+# Warmup on all kinds. 225 = 7.5% of the 3000-step budget; linear, no post-warmup decay.
+type = "linear"
+warmup_steps = 225
+decay_steps = 0
+min_lr = 0.0
+
+[ckpt]
+# Base checkpoint policy: recency-only. Best-N-by-metric retention + patience early stopping
+# (train/_common/classification/best_ckpt.py) are enabled per run in train/multi_meta/runs/*__cls__r2.1.0.
+interval = 250        # save cadence / crash-resume granularity (lose <=250 steps)
+resume_step = -1
+keep_last = 2         # rolling: always retain the 2 newest (for resume)
+keep_interval = 500   # permanent milestones (500,1000,...); a multiple of interval, eval on same grid
+skip_gather_master_weights = true
+skip_optimizer = true

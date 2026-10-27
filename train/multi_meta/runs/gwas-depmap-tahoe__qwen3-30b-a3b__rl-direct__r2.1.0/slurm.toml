@@ -1,0 +1,3 @@
+[slurm]
+job_name = "gwas-depmap-tahoe__qwen3-30b-a3b__rl-direct__r2.1.0"
+partition = "gpu"

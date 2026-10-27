@@ -1,0 +1,18 @@
+# theta' simulator: context-free SFT teaching two coherent conditional generators per candidate x —
+# a COMPELLING SUPPORTING outcome for the hypothesis x directly tests (theta'), and a NULL/against
+# outcome. Both poles are REAL outcomes (no counterfactual synthesis); labels are the belief model's
+# WoE-for-theta' sign. Both valences are natural, coherent outcome classes and the valence is ~orthogonal to the setup, so MLE must read the requested valence.
+# Layer over sft.toml:
+#   CONFIG="train/multi_meta/sft/bed-simulator/sft.toml @ train/multi_meta/sft/bed-simulator/sft-thetaprime.toml" \
+#     WANDB_MODE=online sbatch train/multi_meta/sft/bed-simulator/launch-sft.sbatch
+output_dir = "ibis_data/sft/bed-simulator-thetaprime"
+
+[data]
+name = "ibis_data/bed_sim/sft_thetaprime"
+
+[val.data]
+name = "ibis_data/bed_sim/sft_thetaprime"
+
+[wandb]
+project = "ibis-bed-simulator"
+name = "bed-simulator-thetaprime"

@@ -1,0 +1,35 @@
+cff-version: 1.2.0
+message: "If you use this software, data or models, please cite the paper."
+title: "Ibis0: evidence deliberation for scientific hypotheses"
+license: Apache-2.0
+repository-code: "https://github.com/EdisonScientific/ibis0"
+authors:
+  - given-names: "Conor"
+    family-names: "Igoe"
+  - given-names: "Gabriel"
+    family-names: "Grand"
+  - given-names: "Zane"
+    family-names: "Koch"
+  - given-names: "Albert"
+    family-names: "Bou"
+  - given-names: "Eli"
+    family-names: "Moss"
+  - given-names: "Siddharth"
+    family-names: "Narayanan"
+preferred-citation:
+  type: article
+  title: "Do Language Models Know What Compelling Scientific Evidence Looks Like?"
+  authors:
+    - given-names: "Conor"
+      family-names: "Igoe"
+    - given-names: "Gabriel"
+      family-names: "Grand"
+    - given-names: "Zane"
+      family-names: "Koch"
+    - given-names: "Albert"
+      family-names: "Bou"
+    - given-names: "Eli"
+      family-names: "Moss"
+    - given-names: "Siddharth"
+      family-names: "Narayanan"
+  year: 2026

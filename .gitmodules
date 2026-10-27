@@ -1,0 +1,3 @@
+[submodule "src/prime_rl"]
+	path = src/prime_rl
+	url = https://github.com/PrimeIntellect-ai/prime-rl.git

@@ -1,0 +1,21 @@
+# Serve-only belief config for eval_classification_head.py --serve. Holds only what its EvalConfig
+# accepts (the classification training base is rejected): [model] (replicated from
+# classification-base.toml so the DCP maps), run_dir (ckpt manager root), [ckpt] resume-step.
+run_dir = "ibis_data/runs/gwas-depmap-tahoe__qwen3-30b-a3b__cls__r2.1.0"
+
+[model]
+name = "Qwen/Qwen3-30B-A3B"
+impl = "auto"
+attn = "flash_attention_2"
+optim_cpu_offload = false
+optimization_dtype = "bfloat16"
+reduce_dtype = "bfloat16"
+fused_lm_head_token_chunk_size = 8192
+ep = 1
+cp = 1
+cp_style = "ulysses"
+seq_len = 16384
+
+[ckpt]
+resume_step = 2400
+skip_optimizer = true

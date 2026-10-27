@@ -1,0 +1,105 @@
+# As-run config, kept for provenance. Its [trainer.ckpt] best-N/early-stop fields belong to the prime-rl
+# version the paper was trained with and are not accepted by the pinned upstream prime-rl; use ../rl.toml
+# to train.
+#
+# gwas-depmap-tahoe__qwen3-30b-a3b__rl-thinking__r2.1.0
+# r2.1.0 rl-thinking multi-domain RL: train on ALL THREE (gwas, depmap, tahoe, equal ratio) -- the cross-transfer baseline (nothing held out).
+# Evaluates on all three domains -> eval/<name>/reward per domain; every domain is in-domain here -- the upper reference for the held-out runs.
+# Layered over train/_common/rl-base.toml (shared 30B recipe: model / optim / warmup scheduler / ckpt /
+# zero-advantage filter / temp-0.7 train==eval). Mode: thinking (enable_thinking=true, reasoning prompt).
+# Context: per-episode K ~ Uniform{2..16} (context_size_range), keyed by episode_id.
+# Launch:  train/_common/launch-rl.sh train/multi_meta/runs/gwas-depmap-tahoe__qwen3-30b-a3b__rl-thinking__r2.1.0
+seq_len = 32768
+
+max_steps = 9000  # r2.1.0: raised from 3000 (base) — uniform safety ceiling; early stop is the real terminator
+
+# B200 memory (thinking only): at seq_len=32768, rl-base's selective activation
+# checkpointing OOMs (the MoE fp32 upcast + retained activations — measured ~177 GiB
+# at cp=1 single-domain, and even cp=2 tips over ~178 GiB on the 3-env runs).
+# Full-recompute AC (ac.mode="full") drops the peak to ~43 GiB, validated on all-3
+# thinking. cp stays at the base cp=1: with full AC, cp=1 and cp=2 have the same peak
+# (~43 GiB) and throughput, so cp=1 is preferred — it keeps full dp_shard=8 and skips
+# the ulysses all-to-all comm. rl-direct (seq_len 9216) is unaffected.
+[trainer.model.ac]
+mode = "full"
+
+[wandb]
+project = "multidomain-rl"
+name = "gwas-depmap-tahoe__qwen3-30b-a3b__rl-thinking__r2.1.0"
+
+[orchestrator]
+batch_size = 16
+rollouts_per_example = 4
+
+[orchestrator.train.sampling]
+max_completion_tokens = 24576
+extra_body = { chat_template_kwargs = { enable_thinking = true } }
+
+# Training mix -- equal weight (ratio = 1 on every trained env -> uniform mixture via TrainSource).
+[[orchestrator.train.env]]
+id = "gwas-meta"
+name = "gwas-evidence"
+ratio = 1
+args = { data_path = "hf://EdisonScientific/EDB-Bio/gwas", context_size = 16, context_size_range = [2, 16], reward_type = "brier", unparseable_reward = -1.0, prompt_style = "reasoning" }
+
+[[orchestrator.train.env]]
+id = "depmap-meta"
+name = "depmap-evidence"
+ratio = 1
+args = { data_path = "hf://EdisonScientific/EDB-Bio/depmap", context_size = 16, context_size_range = [2, 16], reward_type = "brier", unparseable_reward = -1.0, prompt_style = "reasoning" }
+
+[[orchestrator.train.env]]
+id = "tahoe-meta"
+name = "tahoe-evidence"
+ratio = 1
+args = { data_path = "hf://EdisonScientific/EDB-Bio/tahoe", context_size = 16, context_size_range = [2, 16], reward_type = "brier", unparseable_reward = -1.0, prompt_style = "reasoning", length_half_life_tokens = 0 }
+
+# rl-thinking eval is the throughput bottleneck (32k thinking, 24.5k-token completions × 3 domains),
+# so eval less often than the base's every-100 and on fewer examples (256 -> 128 per env below).
+[orchestrator.eval]
+interval = 200          # was 100 (base)
+
+[orchestrator.eval.sampling]
+max_completion_tokens = 24576
+extra_body = { chat_template_kwargs = { enable_thinking = true } }
+
+# Eval on all three domains (held-out included) -> independent eval/<name>/reward per domain.
+[[orchestrator.eval.env]]
+id = "gwas-meta"
+name = "gwas-evidence"
+num_examples = 128
+rollouts_per_example = 4
+args = { data_path = "hf://EdisonScientific/EDB-Bio/gwas", context_size = 16, context_size_range = [2, 16], reward_type = "brier", unparseable_reward = -1.0, prompt_style = "reasoning" }
+
+[[orchestrator.eval.env]]
+id = "depmap-meta"
+name = "depmap-evidence"
+num_examples = 128
+rollouts_per_example = 4
+args = { data_path = "hf://EdisonScientific/EDB-Bio/depmap", context_size = 16, context_size_range = [2, 16], reward_type = "brier", unparseable_reward = -1.0, prompt_style = "reasoning" }
+
+[[orchestrator.eval.env]]
+id = "tahoe-meta"
+name = "tahoe-evidence"
+num_examples = 128
+rollouts_per_example = 4
+args = { data_path = "hf://EdisonScientific/EDB-Bio/tahoe", context_size = 16, context_size_range = [2, 16], reward_type = "brier", unparseable_reward = -1.0, prompt_style = "reasoning", length_half_life_tokens = 0 }
+
+[inference.model]
+max_model_len = 32768
+
+# --- r2.1.0 checkpoint selection: best-N by cross-domain eval reward + patience early stop ---
+# Validation-metric checkpointing keyed off a full metric key. `eval/all/avg@4` is the macro-mean eval reward across the three eval envs (all at
+# rollouts_per_example=4). max_steps is a safety ceiling; the eval-reward plateau (early stop) is
+# the real terminator.
+[ckpt]
+interval = 200          # was 250 (base); a multiple of the eval interval (200) so every ckpt is scored
+keep_last = "None"      # cleared: mutually exclusive with keep_best_n ("None" -> null on merge)
+keep_interval = "None"  # cleared
+
+[trainer.ckpt]
+keep_best_n = 2
+best_metric = "eval/all/avg@4"
+best_mode = "max"
+early_stop_patience = 1000
+early_stop_min_delta = 0.001

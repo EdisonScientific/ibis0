@@ -1,0 +1,25 @@
+Disease trait	EFO term	EFO URI	Parent term	Parent URI
+metabolic_disorder_trait_0	metabolic_disorder_trait_0	http://www.ebi.ac.uk/efo/EFO_2000000	Metabolic disorder	http://www.ebi.ac.uk/efo/EFO_9000000
+metabolic_disorder_trait_1	metabolic_disorder_trait_1	http://www.ebi.ac.uk/efo/EFO_2000001	Metabolic disorder	http://www.ebi.ac.uk/efo/EFO_9000000
+metabolic_disorder_trait_2	metabolic_disorder_trait_2	http://www.ebi.ac.uk/efo/EFO_2000002	Metabolic disorder	http://www.ebi.ac.uk/efo/EFO_9000000
+metabolic_disorder_trait_3	metabolic_disorder_trait_3	http://www.ebi.ac.uk/efo/EFO_2000003	Metabolic disorder	http://www.ebi.ac.uk/efo/EFO_9000000
+cardiovascular_disease_trait_0	cardiovascular_disease_trait_0	http://www.ebi.ac.uk/efo/EFO_2000004	Cardiovascular disease	http://www.ebi.ac.uk/efo/EFO_9000001
+cardiovascular_disease_trait_1	cardiovascular_disease_trait_1	http://www.ebi.ac.uk/efo/EFO_2000005	Cardiovascular disease	http://www.ebi.ac.uk/efo/EFO_9000001
+cardiovascular_disease_trait_2	cardiovascular_disease_trait_2	http://www.ebi.ac.uk/efo/EFO_2000006	Cardiovascular disease	http://www.ebi.ac.uk/efo/EFO_9000001
+cardiovascular_disease_trait_3	cardiovascular_disease_trait_3	http://www.ebi.ac.uk/efo/EFO_2000007	Cardiovascular disease	http://www.ebi.ac.uk/efo/EFO_9000001
+cancer_trait_0	cancer_trait_0	http://www.ebi.ac.uk/efo/EFO_2000008	Cancer	http://www.ebi.ac.uk/efo/EFO_9000002
+cancer_trait_1	cancer_trait_1	http://www.ebi.ac.uk/efo/EFO_2000009	Cancer	http://www.ebi.ac.uk/efo/EFO_9000002
+cancer_trait_2	cancer_trait_2	http://www.ebi.ac.uk/efo/EFO_2000010	Cancer	http://www.ebi.ac.uk/efo/EFO_9000002
+cancer_trait_3	cancer_trait_3	http://www.ebi.ac.uk/efo/EFO_2000011	Cancer	http://www.ebi.ac.uk/efo/EFO_9000002
+immune_system_disorder_trait_0	immune_system_disorder_trait_0	http://www.ebi.ac.uk/efo/EFO_2000012	Immune system disorder	http://www.ebi.ac.uk/efo/EFO_9000003
+immune_system_disorder_trait_1	immune_system_disorder_trait_1	http://www.ebi.ac.uk/efo/EFO_2000013	Immune system disorder	http://www.ebi.ac.uk/efo/EFO_9000003
+immune_system_disorder_trait_2	immune_system_disorder_trait_2	http://www.ebi.ac.uk/efo/EFO_2000014	Immune system disorder	http://www.ebi.ac.uk/efo/EFO_9000003
+immune_system_disorder_trait_3	immune_system_disorder_trait_3	http://www.ebi.ac.uk/efo/EFO_2000015	Immune system disorder	http://www.ebi.ac.uk/efo/EFO_9000003
+body_measurement_trait_0	body_measurement_trait_0	http://www.ebi.ac.uk/efo/EFO_2000016	Body measurement	http://www.ebi.ac.uk/efo/EFO_9000004
+body_measurement_trait_1	body_measurement_trait_1	http://www.ebi.ac.uk/efo/EFO_2000017	Body measurement	http://www.ebi.ac.uk/efo/EFO_9000004
+body_measurement_trait_2	body_measurement_trait_2	http://www.ebi.ac.uk/efo/EFO_2000018	Body measurement	http://www.ebi.ac.uk/efo/EFO_9000004
+body_measurement_trait_3	body_measurement_trait_3	http://www.ebi.ac.uk/efo/EFO_2000019	Body measurement	http://www.ebi.ac.uk/efo/EFO_9000004
+neurological_disorder_trait_0	neurological_disorder_trait_0	http://www.ebi.ac.uk/efo/EFO_2000020	Neurological disorder	http://www.ebi.ac.uk/efo/EFO_9000005
+neurological_disorder_trait_1	neurological_disorder_trait_1	http://www.ebi.ac.uk/efo/EFO_2000021	Neurological disorder	http://www.ebi.ac.uk/efo/EFO_9000005
+neurological_disorder_trait_2	neurological_disorder_trait_2	http://www.ebi.ac.uk/efo/EFO_2000022	Neurological disorder	http://www.ebi.ac.uk/efo/EFO_9000005
+neurological_disorder_trait_3	neurological_disorder_trait_3	http://www.ebi.ac.uk/efo/EFO_2000023	Neurological disorder	http://www.ebi.ac.uk/efo/EFO_9000005

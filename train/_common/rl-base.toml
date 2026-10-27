@@ -1,0 +1,118 @@
+# Shared r2.1.0 RL recipe — the common base for the multi-node evidence-deliberation RL runs
+# (gwas / depmap / tahoe). Under r2.x every run uses the same 30B model, optimizer, warmup
+# scheduler, checkpoint policy, and advantage/zero-advantage-filter recipe, so all of that lives
+# here. Each run override carries only what genuinely varies: seq_len + inference max_model_len,
+# wandb, the sampling budget (max_completion_tokens + enable_thinking), batch_size /
+# rollouts_per_example, and the per-domain env blocks. output_dir is injected by launch-rl.sh.
+#
+# Compose left-to-right (override wins per-key):
+#   rl @ train/_common/rl-base.toml @ <run>/rl.toml @ <run>/slurm.toml
+#
+# NOTE: no [[orchestrator.*.env]] array-of-tables blocks live here — prime-rl replaces
+# array-of-tables wholesale on merge, so each override must carry its full per-domain env.
+#
+# Parallelism and memory settings for 8xB200 nodes (180GB/GPU), validated end-to-end:
+#   - [inference.parallel] tp=1,dp=8: tp=8 crashes — vLLM's FlashInfer MoE weight-layout kernel
+#     hardcodes block_k=128, and Qwen3-30B-A3B's moe_intermediate_size=768 is not divisible by 128 at
+#     8-way sharding (768/8=96). tp=1 also roughly halves per-weight-update NCCL broadcast volume.
+#   - optim_cpu_offload=false, no ac_offloading: FSDP already shards weights/grads/optimizer 8-way and
+#     B200 HBM has room, so offloading would be pure CPU<->GPU transfer overhead.
+#   - trainer.model.cp=1: all 8 training GPUs go to dp_shard, with no ulysses all-to-all.
+#     The rl-thinking configs (seq_len=32768) keep cp=1 but override ac.mode="full": at 32768,
+#     selective AC OOMs (the MoE fp32 upcast + retained activations, ~177 GiB); full-recompute AC
+#     drops the peak to ~43 GiB. With full AC, cp=2 has the same peak and throughput as cp=1, so
+#     cp=1 is preferred. rl-direct (seq_len 9216) keeps selective AC.
+#   - trainer.model.ac.mode="selective" (targets=["norm"], the config default): recomputes far less
+#     than full-block recompute where memory allows.
+#   - attn=flash_attention_2: the installed flash_attention_3 build's kernels are Hopper-only
+#     ("no kernel image available for execution on the device" on B200/sm_100).
+#
+# Not used: fp8 (a numerics change — see src/prime_rl/AGENTS.md on optimization_dtype/reduce_dtype)
+# and MoE expert-parallelism (trainer.model.ep stays 1).
+
+max_steps = 3000
+
+[model]
+name = "Qwen/Qwen3-30B-A3B"
+
+[ckpt]
+# Base checkpoint policy: recency-only. Validation-metric selection (best-N by eval reward + patience
+# early stop) is applied per run with scripts/select_checkpoint.py; the dense step grid here keeps the
+# early eval-reward peak so the best checkpoint can also be picked offline from the eval curve.
+interval = 250        # save cadence / crash-resume granularity (lose <=250 steps)
+resume_step = -1
+keep_last = 2         # rolling: always retain the 2 newest (for resume)
+keep_interval = 500   # permanent milestones (500,1000,...); a multiple of interval, and eval lands
+                      # on these so every kept milestone has an eval score
+
+[trainer]
+# Distributed op timeout (default 600s). The weight-broadcast rendezvous can exceed 600s when the
+# inference server does a cold FlashInfer compile (~15 min at 32k), which deadlocks the trainer ranks.
+dist_timeout_seconds = 1800
+
+[trainer.ckpt]
+skip_optimizer = true
+
+[trainer.optim]
+lr = 9e-6
+
+[trainer.scheduler]
+# Warmup on all kinds. 225 = 7.5% of the 3000-step budget; linear, no post-warmup decay.
+type = "linear"
+warmup_steps = 225
+decay_steps = 0
+min_lr = 0.0
+
+[trainer.model]
+impl = "auto"
+attn = "flash_attention_2"
+optim_cpu_offload = false
+optimization_dtype = "bfloat16"
+reduce_dtype = "bfloat16"
+fused_lm_head_token_chunk_size = 8192
+ep = 1
+cp = 1
+cp_style = "ulysses"
+
+[trainer.model.ac]
+mode = "selective"
+freq = 1
+
+[deployment]
+type = "multi_node"
+num_train_nodes = 1
+num_infer_nodes = 1
+
+[log]
+level = "info"
+
+[weight_broadcast]
+type = "nccl"
+# Headroom over the ~10-15 min inference warmup (FlashInfer MoE autotune +
+# cudagraph capture) so the trainer's broadcast rendezvous doesn't time out.
+timeout = 3600
+
+[orchestrator]
+# Zero-advantage filtering on all kinds. Drops rollout groups whose advantages are all zero before
+# the trainer sees them.
+pre_batch_filters = [{ type = "zero_advantage", enforce = true }]
+post_batch_filters = []
+
+[orchestrator.train.sampling]
+temperature = 0.7
+
+[orchestrator.eval]
+interval = 100
+
+# Eval at the TRAIN sampling temperature (0.7), not greedy, so eval reward reflects the actual
+# sampled policy. rollouts_per_example is bumped in each override's eval env to tame the added
+# variance from stochastic decoding.
+[orchestrator.eval.sampling]
+temperature = 0.7
+
+[orchestrator.advantage]
+type = "default"
+
+[inference.parallel]
+tp = 1
+dp = 8

@@ -1,0 +1,16 @@
+# Serve the theta' simulator (final SFT checkpoint) as an OpenAI-compatible vLLM endpoint for the BED
+# experiment driver (scripts/analysis/rq5_bed/bed_thetaprime.py). 8 data-parallel replicas (tp=1,dp=8)
+# on one node for max generation throughput (the MC-16 arm is gen-bound).
+#   uv run inference @ train/multi_meta/sft/bed-simulator/serve_thetaprime.toml
+output_dir = "ibis_data/serve/thetaprime"
+
+[model]
+name = "ibis_data/sft/bed-simulator-thetaprime/weights/step_1200"
+
+[parallel]
+tp = 1
+dp = 8
+
+[slurm]
+job_name = "tp-sim-serve"
+partition = "gpu"

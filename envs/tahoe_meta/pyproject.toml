@@ -1,0 +1,22 @@
+[project]
+name = "tahoe-meta"
+version = "0.1.0"
+description = "Tahoe Evidence Deliberation Meta-Learning Environment"
+dependencies = [
+    "verifiers>=0.1.5.post0",
+    "datasets",
+    "pandas",
+    "pyarrow",
+    "numpy",
+    "ibis-env-utils",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build]
+include = ["tahoe_meta.py", "episodes.py"]
+
+[tool.uv.sources]
+ibis-env-utils = { workspace = true }
