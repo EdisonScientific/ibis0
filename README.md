@@ -25,7 +25,10 @@ All models are fine-tuned from [Qwen/Qwen3-30B-A3B](https://huggingface.co/Qwen/
 
 ## Installation
 
-Requires Linux, CUDA 12.8+ GPUs, Python 3.12 and [uv](https://docs.astral.sh/uv/).
+Requires Python 3.12 and [uv](https://docs.astral.sh/uv/). macOS (Apple Silicon or Intel)
+and Linux (x86_64 or aarch64) are supported for data preparation, analysis, and API-based
+evaluation. Training and local GPU inference require Linux and CUDA 12.8+ GPUs; the
+CUDA training dependencies are installed only on Linux.
 
 ```bash
 git clone --recurse-submodules https://github.com/EdisonScientific/ibis0.git
@@ -174,7 +177,7 @@ pipeline and each renderer, and `scripts/analysis/rq5_bed/` for the BED experime
 ```bibtex
 @article{ibis0,
   title  = {Do Language Models Know What Compelling Scientific Evidence Looks Like?},
-  author = {Igoe, Conor and Grand, Gabriel and Koch, Zane and Bou, Albert and Moss, Eli and Narayanan, Siddharth},
+  author = {Igoe, Conor and Grand, Gabriel and Koch, Zane and Bou, Albert and Moss, Eli and Hinks, Michaela M. and Rodriques, Samuel G. and White, Andrew and Narayanan, Siddharth},
   journal = {arXiv preprint arXiv:ARXIV_ID},
   year   = {2026}
 }
