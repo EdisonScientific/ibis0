@@ -1,7 +1,7 @@
 # Ibis0: evidence deliberation for scientific hypotheses
 
 Code, data and models for **"Do Language Models Know What Compelling Scientific Evidence Looks Like?"**
-([arXiv](ARXIV_URL)).
+([arXiv](https://arxiv.org/abs/2610.41015)).
 
 Ibis0 models read a biological hypothesis together with a set of experimental results (evidence
 "stubs" from GWAS, DepMap CRISPR screens and Tahoe-100M perturbation data) and report a calibrated
